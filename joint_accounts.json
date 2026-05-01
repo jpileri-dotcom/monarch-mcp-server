@@ -1,0 +1,21 @@
+{
+  "_comment": "Account IDs to display as 'Joint' instead of a single owner. Edit this file and restart the MCP server to apply changes.",
+  "joint_account_ids": [
+    "165680754648385447",
+    "165680658799101798",
+    "199911154206606523",
+    "225458909603661635",
+    "226745568277268233",
+    "214496080790783766",
+    "230268947361924722"
+  ],
+  "_legend": {
+    "165680754648385447": "6321 Ridge Ave (primary home)",
+    "165680658799101798": "2024 KIA Carnival EX (vehicle asset)",
+    "199911154206606523": "Account (...6699) — UWM mortgage",
+    "225458909603661635": "FourLeaf Home Loan (...3142)",
+    "226745568277268233": "HOME PROJECTS (...8408) — Wells Fargo HELOC",
+    "214496080790783766": "UCC SECURED SOLAR (...2501) — solar loan",
+    "230268947361924722": "IND 2024 KIA/CARNIVAL (...707) — car loan"
+  }
+}

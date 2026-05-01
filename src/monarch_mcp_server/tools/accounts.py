@@ -1,5 +1,6 @@
 """Account management tools."""
 
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -7,7 +8,7 @@ from typing import Optional
 
 from monarch_mcp_server.app import mcp
 from monarch_mcp_server.client import get_monarch_client
-from monarch_mcp_server.helpers import json_success, json_error
+from monarch_mcp_server.helpers import json_success, json_error, get_account_owner_map
 
 logger = logging.getLogger(__name__)
 
@@ -17,20 +18,51 @@ async def get_accounts() -> str:
     """Get all financial accounts from Monarch Money."""
     try:
         client = await get_monarch_client()
-        accounts = await client.get_accounts()
+        accounts, owner_map = await asyncio.gather(
+            client.get_accounts(),
+            get_account_owner_map(client),
+        )
 
         account_list = []
         for account in accounts.get("accounts", []):
+            acct_id = account.get("id")
+            institution = account.get("institution") or {}
+            credential = account.get("credential") or {}
+            cred_institution = credential.get("institution") or {}
             account_info = {
-                "id": account.get("id"),
-                "name": account.get("displayName") or account.get("name"),
+                "id": acct_id,
+                "name": account.get("displayName"),
+                "mask": account.get("mask"),
                 "type": (account.get("type") or {}).get("name"),
+                "type_display": (account.get("type") or {}).get("display"),
+                "subtype": (account.get("subtype") or {}).get("name"),
+                "subtype_display": (account.get("subtype") or {}).get("display"),
                 "balance": account.get("currentBalance"),
-                "institution": (account.get("institution") or {}).get("name"),
-                "is_active": account.get("isActive")
-                if "isActive" in account
-                else not account.get("deactivatedAt"),
+                "display_balance": account.get("displayBalance"),
+                "is_asset": account.get("isAsset"),
+                "include_in_net_worth": account.get("includeInNetWorth"),
+                "include_balance_in_net_worth": account.get("includeBalanceInNetWorth"),
+                "include_in_goal_balance": account.get("includeInGoalBalance"),
+                "hide_transactions_from_reports": account.get("hideTransactionsFromReports"),
+                "institution": institution.get("name"),
+                "institution_url": institution.get("url"),
+                "institution_color": institution.get("primaryColor"),
+                "institution_status": cred_institution.get("status"),
+                "data_provider": account.get("dataProvider"),
+                "is_manual": account.get("isManual"),
+                "sync_disabled": account.get("syncDisabled"),
+                "connection_update_required": credential.get("updateRequired"),
+                "disconnected_at": credential.get("disconnectedFromDataProviderAt"),
+                "transactions_count": account.get("transactionsCount"),
+                "holdings_count": account.get("holdingsCount"),
+                "logo_url": account.get("logoUrl"),
+                "owner": owner_map.get(acct_id),
+                "is_active": not account.get("deactivatedAt"),
                 "is_hidden": account.get("isHidden", False),
+                "hide_from_list": account.get("hideFromList"),
+                "created_at": account.get("createdAt"),
+                "updated_at": account.get("updatedAt"),
+                "last_synced_at": account.get("displayLastUpdatedAt"),
             }
             account_list.append(account_info)
 

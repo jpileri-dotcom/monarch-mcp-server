@@ -110,7 +110,18 @@ class SecureMonarchSession:
         self._cleanup_old_session_files()
 
     def load_token(self) -> Optional[str]:
-        """Load the authentication token from the system keyring or file fallback."""
+        """Load the authentication token.
+
+        Priority:
+          1. MONARCH_TOKEN environment variable (cloud / remote deployments)
+          2. System keyring
+          3. File fallback (~/.monarch-mcp-server/token)
+        """
+        env_token = os.environ.get("MONARCH_TOKEN", "").strip()
+        if env_token:
+            logger.info("✅ Token loaded from MONARCH_TOKEN environment variable")
+            return env_token
+
         if self._use_keyring:
             try:
                 import keyring

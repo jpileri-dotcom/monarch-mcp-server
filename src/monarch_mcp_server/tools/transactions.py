@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from monarch_mcp_server.app import mcp
 from monarch_mcp_server.client import get_monarch_client
-from monarch_mcp_server.helpers import format_transaction, json_success, json_error
+from monarch_mcp_server.helpers import format_transaction, json_success, json_error, get_account_owner_map
 
 logger = logging.getLogger(__name__)
 
@@ -73,36 +73,15 @@ async def get_transactions(
         if is_recurring is not None:
             filters["is_recurring"] = is_recurring
 
-        transactions = await client.get_transactions(limit=limit, offset=offset, **filters)
+        transactions, owner_map = await asyncio.gather(
+            client.get_transactions(limit=limit, offset=offset, **filters),
+            get_account_owner_map(client),
+        )
 
-        transaction_list = []
-        for txn in transactions.get("allTransactions", {}).get("results", []):
-            category = txn.get("category") or {}
-            account = txn.get("account") or {}
-            merchant = txn.get("merchant") or {}
-            transaction_info = {
-                "id": txn.get("id"),
-                "date": txn.get("date"),
-                "amount": txn.get("amount"),
-                "description": txn.get("description"),
-                "notes": txn.get("notes"),
-                "category": category.get("name"),
-                "category_id": category.get("id"),
-                "account": account.get("displayName"),
-                "account_id": account.get("id"),
-                "merchant": merchant.get("name"),
-                "is_pending": txn.get("isPending", False),
-                "needs_review": txn.get("needsReview", False),
-                "review_status": txn.get("reviewStatus"),
-                "is_recurring": bool(txn.get("isRecurring") or txn.get("recurringTransactionStream")),
-                "is_split_transaction": bool(txn.get("isSplitTransaction")),
-                "hide_from_reports": txn.get("hideFromReports", False),
-                "tags": [
-                    {"id": tag.get("id"), "name": tag.get("name")}
-                    for tag in (txn.get("tags") or [])
-                ],
-            }
-            transaction_list.append(transaction_info)
+        transaction_list = [
+            format_transaction(txn, account_owner_map=owner_map)
+            for txn in transactions.get("allTransactions", {}).get("results", [])
+        ]
 
         return json_success(transaction_list)
     except Exception as e:
@@ -176,10 +155,13 @@ async def search_transactions(
         if is_recurring is not None:
             filters["is_recurring"] = is_recurring
 
-        transactions_data = await client.get_transactions(**filters)
+        transactions_data, owner_map = await asyncio.gather(
+            client.get_transactions(**filters),
+            get_account_owner_map(client),
+        )
 
         transaction_list = [
-            format_transaction(txn, extended=True)
+            format_transaction(txn, extended=True, account_owner_map=owner_map)
             for txn in transactions_data.get("allTransactions", {}).get("results", [])
         ]
 
@@ -561,7 +543,10 @@ async def get_transactions_needing_review(
         if without_notes_only:
             filters["has_notes"] = False
 
-        transactions_data = await client.get_transactions(**filters)
+        transactions_data, owner_map = await asyncio.gather(
+            client.get_transactions(**filters),
+            get_account_owner_map(client),
+        )
 
         transaction_list = []
         for txn in transactions_data.get("allTransactions", {}).get("results", []):
@@ -573,7 +558,7 @@ async def get_transactions_needing_review(
                 if category and category.get("id"):
                     continue
 
-            transaction_list.append(format_transaction(txn))
+            transaction_list.append(format_transaction(txn, account_owner_map=owner_map))
 
         return json_success(transaction_list)
     except Exception as e:
