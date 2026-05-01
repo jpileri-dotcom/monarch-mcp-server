@@ -1,7 +1,6 @@
 """Financial analytics tools (cashflow, net worth)."""
 
 import logging
-from datetime import datetime as dt
 from typing import Any, Dict, Optional
 
 from monarch_mcp_server.app import mcp
@@ -68,9 +67,9 @@ async def get_net_worth(
 
         params: Dict[str, Any] = {}
         if start_date:
-            params["start_date"] = dt.strptime(start_date, "%Y-%m-%d").date()
+            params["start_date"] = start_date  # pass ISO string directly; SDK handles it
         if end_date:
-            params["end_date"] = dt.strptime(end_date, "%Y-%m-%d").date()
+            params["end_date"] = end_date
         if account_type:
             params["account_type"] = account_type
 
