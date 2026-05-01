@@ -5,6 +5,8 @@ import os
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +26,15 @@ _HOST = "0.0.0.0" if _TRANSPORT != "stdio" else "127.0.0.1"
 
 # Initialize FastMCP server
 mcp = FastMCP("Monarch Money MCP Server", host=_HOST, port=_PORT)
+
+# Health check endpoint for Railway / cloud load balancers
+@mcp.custom_route("/", methods=["GET"])
+async def health_root(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok", "service": "monarch-mcp-server"})
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok", "service": "monarch-mcp-server"})
 
 # Import tools package to trigger @mcp.tool() registration
 import monarch_mcp_server.tools  # noqa: E402, F401
